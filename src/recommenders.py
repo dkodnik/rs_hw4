@@ -1,70 +1,63 @@
 import pandas as pd
 import numpy as np
 
-# Для работы с матрицами
+# Р”Р»СЏ СЂР°Р±РѕС‚С‹ СЃ РјР°С‚СЂРёС†Р°РјРё
 from scipy.sparse import csr_matrix
 
-# Матричная факторизация
+# РњР°С‚СЂРёС‡РЅР°СЏ С„Р°РєС‚РѕСЂРёР·Р°С†РёСЏ
 from implicit.als import AlternatingLeastSquares
-from implicit.nearest_neighbours import ItemItemRecommender  # нужен для одного трюка
+from implicit.nearest_neighbours import ItemItemRecommender  # РЅСѓР¶РµРЅ РґР»СЏ РѕРґРЅРѕРіРѕ С‚СЂСЋРєР°
 from implicit.nearest_neighbours import bm25_weight, tfidf_weight
 
 
 class MainRecommender:
-    """Рекоммендации, которые можно получить из ALS
+    """Р РµРєРѕРјРјРµРЅРґР°С†РёРё, РєРѕС‚РѕСЂС‹Рµ РјРѕР¶РЅРѕ РїРѕР»СѓС‡РёС‚СЊ РёР· ALS
     
     Input
     -----
     user_item_matrix: pd.DataFrame
-        Матрица взаимодействий user-item
+        РњР°С‚СЂРёС†Р° РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёР№ user-item
     """
     
     def __init__(self, data, weighting=True):
                 
-        # Топ покупок каждого юзера
+        # РўРѕРї РїРѕРєСѓРїРѕРє РєР°Р¶РґРѕРіРѕ СЋР·РµСЂР°
         self.top_purchases = data.groupby(['user_id', 'item_id'])['quantity'].count().reset_index()
         self.top_purchases.sort_values('quantity', ascending=False, inplace=True)
         self.top_purchases = self.top_purchases[self.top_purchases['item_id'] != 999999]
 
-        # Топ покупок по всему датасету
+        # РўРѕРї РїРѕРєСѓРїРѕРє РїРѕ РІСЃРµРјСѓ РґР°С‚Р°СЃРµС‚Сѓ
         self.overall_top_purchases = data.groupby('item_id')['quantity'].count().reset_index()
         self.overall_top_purchases.sort_values('quantity', ascending=False, inplace=True)
         self.overall_top_purchases = self.overall_top_purchases[self.overall_top_purchases['item_id'] != 999999]
         self.overall_top_purchases = self.overall_top_purchases.item_id.tolist()
         
         self.user_item_matrix = self.prepare_matrix(data)  # pd.DataFrame
-        self.id_to_itemid, self.id_to_userid, \ 
-            self.itemid_to_id, self.userid_to_id = prepare_dicts(self.user_item_matrix)
-        
-        # Словарь {item_id: 0/1}. 0/1 - факт принадлежности товара к СТМ
-        self.item_id_to_ctm = #your_code
-        
-        # Own recommender обучается до взвешивания матрицы
-        self.own_recommender = self.fit_own_recommender(self.user_item_matrix)
+        self.id_to_itemid, self.id_to_userid, self.itemid_to_id, self.userid_to_id = prepare_dicts(self.user_item_matrix)
         
         if weighting:
             self.user_item_matrix = bm25_weight(self.user_item_matrix.T).T 
         
         self.model = self.fit(self.user_item_matrix)
+        self.own_recommender = self.fit_own_recommender(self.user_item_matrix)
      
     @staticmethod
     def prepare_matrix(data):
         
-        # your_code
         user_item_matrix = pd.pivot_table(data, 
                                   index='user_id', columns='item_id', 
-                                  values='quantity', # Можно пробовать другие варианты
+                                  values='quantity', # РњРѕР¶РЅРѕ РїСЂРѕР±РѕРІР°С‚СЊ РґСЂСѓРіРёРµ РІР°СЂРёР°РЅС‚С‹
                                   aggfunc='count', 
                                   fill_value=0
                                  )
 
-        user_item_matrix = user_item_matrix.astype(float) # необходимый тип матрицы для implicit
+        user_item_matrix = user_item_matrix.astype(float) # РЅРµРѕР±С…РѕРґРёРјС‹Р№ С‚РёРї РјР°С‚СЂРёС†С‹ РґР»СЏ implicit
         
         return user_item_matrix
     
     @staticmethod
     def prepare_dicts(user_item_matrix):
-        """Подготавливает вспомогательные словари"""
+        """РџРѕРґРіРѕС‚Р°РІР»РёРІР°РµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ СЃР»РѕРІР°СЂРё"""
         
         userids = user_item_matrix.index.values
         itemids = user_item_matrix.columns.values
@@ -82,7 +75,7 @@ class MainRecommender:
      
     @staticmethod
     def fit_own_recommender(user_item_matrix):
-        """Обучает модель, которая рекомендует товары, среди товаров, купленных юзером"""
+        """РћР±СѓС‡Р°РµС‚ РјРѕРґРµР»СЊ, РєРѕС‚РѕСЂР°СЏ СЂРµРєРѕРјРµРЅРґСѓРµС‚ С‚РѕРІР°СЂС‹, СЃСЂРµРґРё С‚РѕРІР°СЂРѕРІ, РєСѓРїР»РµРЅРЅС‹С… СЋР·РµСЂРѕРј"""
     
         own_recommender = ItemItemRecommender(K=1, num_threads=4)
         own_recommender.fit(csr_matrix(user_item_matrix).T.tocsr())
@@ -91,7 +84,7 @@ class MainRecommender:
     
     @staticmethod
     def fit(user_item_matrix, n_factors=20, regularization=0.001, iterations=15, num_threads=4):
-        """Обучает ALS"""
+        """РћР±СѓС‡Р°РµС‚ ALS"""
         
         model = AlternatingLeastSquares(factors=factors, 
                                              regularization=regularization,
@@ -102,11 +95,10 @@ class MainRecommender:
         return model
 
     def get_similar_items_recommendation(self, user, filter_ctm=True, N=5):
-        """Рекомендуем товары, похожие на топ-N купленных юзером товаров"""
+        """Р РµРєРѕРјРµРЅРґСѓРµРј С‚РѕРІР°СЂС‹, РїРѕС…РѕР¶РёРµ РЅР° С‚РѕРї-N РєСѓРїР»РµРЅРЅС‹С… СЋР·РµСЂРѕРј С‚РѕРІР°СЂРѕРІ"""
 
-        # your_code
-        # Практически полностью реализовали на прошлом вебинаре
-        # Не забывайте, что нужно учесть параметр filter_ctm
+        # РџСЂР°РєС‚РёС‡РµСЃРєРё РїРѕР»РЅРѕСЃС‚СЊСЋ СЂРµР°Р»РёР·РѕРІР°Р»Рё РЅР° РїСЂРѕС€Р»РѕРј РІРµР±РёРЅР°СЂРµ
+        # РќРµ Р·Р°Р±С‹РІР°Р№С‚Рµ, С‡С‚Рѕ РЅСѓР¶РЅРѕ СѓС‡РµСЃС‚СЊ РїР°СЂР°РјРµС‚СЂ filter_ctm
         
         filter_list = []
         if filter_ctm:
@@ -115,21 +107,24 @@ class MainRecommender:
                 if self.item_id_to_ctm[item] == 1:
                     filter_list.append(item)
 
-        # топ-N купленных юзером товаров
+        # С‚РѕРї-N РєСѓРїР»РµРЅРЅС‹С… СЋР·РµСЂРѕРј С‚РѕРІР°СЂРѕРІ
         items_list = list(set(self.top_purchases[self.userid_to_id[user]]) - set(filter_list))
 
         res = [self.id_to_itemid[rec[0]] for rec in self.model.similar_items(items_list, N=N)]
 
+        assert len(res) == N, 'РљРѕР»РёС‡РµСЃС‚РІРѕ СЂРµРєРѕРјРµРЅРґР°С†РёР№ != {}'.format(N)
         return res
     
     def get_similar_users_recommendation(self, user, N=5):
-    """Рекомендуем топ-N товаров, среди купленных похожими юзерами"""
+        """Р РµРєРѕРјРµРЅРґСѓРµРј С‚РѕРї-N С‚РѕРІР°СЂРѕРІ, СЃСЂРµРґРё РєСѓРїР»РµРЅРЅС‹С… РїРѕС…РѕР¶РёРјРё СЋР·РµСЂР°РјРё"""
     
-        # your_code
-        # Не забываем исключить нулевого похожего юзера
+        # РќРµ Р·Р°Р±С‹РІР°РµРј РёСЃРєР»СЋС‡РёС‚СЊ РЅСѓР»РµРІРѕРіРѕ РїРѕС…РѕР¶РµРіРѕ СЋР·РµСЂР°
         recs = model.similar_users(userid_to_id[user], N=N+1)
         own_recommender_res = self.own_recommender
         
         res = [self.id_to_itemid[rec[0]] for rec in self.model.similar_users(userid=self.userid_to_id[user], N=N + 1)]
         res = list(set(res) - set(own_recommender_res))
+        
+        assert len(res) == N, 'РљРѕР»РёС‡РµСЃС‚РІРѕ СЂРµРєРѕРјРµРЅРґР°С†РёР№ != {}'.format(N)
+        return res
         
