@@ -3,12 +3,9 @@ from src.metrics import precision_at_k
 import pandas as pd
 import numpy as np
 import yaml
-#from yaml.loader import FullLoader
 
-# Для работы с матрицами
 from scipy.sparse import csr_matrix
 
-# Матричная факторизация
 from implicit.als import AlternatingLeastSquares
 from implicit.nearest_neighbours import ItemItemRecommender  # нужен для одного трюка
 from implicit.nearest_neighbours import bm25_weight
@@ -43,7 +40,7 @@ class MainRecommender:
             self.overall_top_purchases['item_id'] != 999999]
         self.overall_top_purchases = self.overall_top_purchases.item_id.tolist()
 
-        self.user_item_matrix = self._prepare_matrix(data)  # pd.DataFrame
+        self.user_item_matrix = self._prepare_matrix(data)
         self.id_to_itemid, self.id_to_userid, self.itemid_to_id, self.userid_to_id = \
             self._prepare_dicts(self.user_item_matrix)
 
@@ -61,7 +58,7 @@ class MainRecommender:
                                           values='quantity',
                                           aggfunc='count',
                                           fill_value=0,
-                                          sort=False)#!
+                                          sort=False)
 
         user_item_matrix = user_item_matrix.astype(float)  # необходимый тип матрицы для implicit
 
@@ -102,13 +99,6 @@ class MainRecommender:
         return data_actual
 
     def preprocessing(self, dataset, t='train', training=True):
-        """
-        Prepare data for ranker -- splitting in correct way
-        :param dataset: object of Dataset class
-        :param t: 'train' (data_train_lvl_2) or 'valuate' (data_val_lvl_2)
-        :param training: if use dataset.data_test - use True
-        :return: X and y
-        """
 
         if training:
             data_train_lvl_1 = dataset.data_train_lvl_1
@@ -312,7 +302,7 @@ class MainRecommender:
                       'task_type': tt_PU,
                       'max_depth': 7,
                       'loss_function': 'PairLogitPairwise',
-                      'random_state': 29,
+                      'random_state': 42,
                       }
 
         ranker_model = CatBoostRanker(**parameters)
